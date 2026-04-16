@@ -3,4 +3,4 @@
 diaasiaiiiodsjio
 
 faojoafon
-![alt text](week1/image.png)
+![alt text](image.png)
