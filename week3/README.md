@@ -3,8 +3,7 @@
 diaasiaiiiodsjio
 
 faojoafon
-![alt text](123.png)
-<video src="8.mp4" controls width="100%"></video>
+<video src="./8.mp4" controls width="100%"></video>
 ```import pybullet as p
 import pybullet_data
 import time
