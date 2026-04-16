@@ -1,6 +1,2 @@
 # liuyiyuan
-
-diaasiaiiiodsjio
-
-faojoafon
-![alt text](image.png)
+下载并了解Ubuntu系统

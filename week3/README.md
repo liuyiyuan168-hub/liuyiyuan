@@ -3,71 +3,116 @@
 diaasiaiiiodsjio
 
 faojoafon
-<video src="./8.mp4" controls width="100%"></video>
-```import pybullet as p
-import pybullet_data
+![alt text](1.png)
+![alt text](2.png)
+```#!/usr/bin/env python3
+"""
+让小乌龟走正方形的控制脚本
+"""
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
 import time
-import math
 
-# --- 环境初始化 ---
-p.connect(p.GUI)
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
-p.setGravity(0, 0, -9.8)
-p.resetDebugVisualizerCamera(1.5, 45, -30, [0.5, 0, 0.65])
 
-p.loadURDF("plane.urdf")
-p.loadURDF("table/table.urdf", [0.5, 0, 0], useFixedBase=True)
+class SquareMover(Node):
+    """走正方形的控制节点"""
 
-# 1. 加载机器人
-pandaId = p.loadURDF("franka_panda/panda.urdf", [0.5, 0, 0.625], useFixedBase=True)
+    def __init__(self):
+        super().__init__('square_mover')
 
-# 2. 修改方块位置 (这里改成了 x=0.6, y=-0.2)
-target_pos = [0.6, -0.2, 0.66]
-cubeId = p.loadURDF("cube_small.urdf", target_pos)
+        # 创建发布者
+        self.cmd_vel_pub = self.create_publisher(
+            Twist, 
+            '/turtle1/cmd_vel', 
+            10
+        )
 
-# 增加摩擦力，否则容易滑掉
-p.changeDynamics(cubeId, -1, lateralFriction=5.0)
-p.changeDynamics(pandaId, 9, lateralFriction=5.0)
-p.changeDynamics(pandaId, 10, lateralFriction=5.0)
+        # ============ 参数设置 ============
+        self.SPEED = 1.0              # 线速度 m/s
+        self.TURN_SPEED = 1.0          # 角速度 rad/s
+        self.SIDE_LENGTH = 2.0         # 边长 m
 
-def move_ee(pos):
-    # 计算逆向运动学，保持夹爪垂直向下 (math.pi, 0, 0)
-    jointPoses = p.calculateInverseKinematics(
-        pandaId, 11, pos, 
-        p.getQuaternionFromEuler([math.pi, 0, 0])
-    )
-    for i in range(7):
-        p.setJointMotorControl2(pandaId, i, p.POSITION_CONTROL, jointPoses[i], force=500)
+        # 计算运动时间
+        self.MOVE_TIME = self.SIDE_LENGTH / self.SPEED
+        self.TURN_TIME = 1.5708 / self.TURN_SPEED  # 90° = π/2
 
-def gripper(opening):
-    p.setJointMotorControl2(pandaId, 9, p.POSITION_CONTROL, opening, force=200)
-    p.setJointMotorControl2(pandaId, 10, p.POSITION_CONTROL, opening, force=200)
+        self.get_logger().info('🎯 正方形控制节点启动！')
+        self.get_logger().info(f'📐 边长: {self.SIDE_LENGTH}m, 速度: {self.SPEED}m/s')
 
-state = 0
-state_t = time.time()
+    def move_straight(self, duration):
+        """直行指定时间"""
+        self.get_logger().info('→ 直行...')
 
-while True:
-    now = time.time()
-    dt = now - state_t
-    cube_pos, _ = p.getBasePositionAndOrientation(cubeId)
+        msg = Twist()
+        msg.linear.x = float(self.SPEED)
+        msg.angular.z = 0.0
 
-    if state == 0: # 移动到方块上方 15cm
-        move_ee([cube_pos[0], cube_pos[1], cube_pos[2] + 0.15])
-        gripper(0.04) 
-        if dt > 1.5: state = 1; state_t = now
+        # 记录开始时间
+        start_time = self.get_clock().now()
 
-    elif state == 1: # 下降：注意 z 偏移量设为 +0.01 确保夹爪深度足够
-        move_ee([cube_pos[0], cube_pos[1], cube_pos[2] + 0.01])
-        if dt > 1.0: state = 2; state_t = now
+        # 持续发布命令
+        while (self.get_clock().now() - start_time).nanoseconds < duration * 1e9:
+            self.cmd_vel_pub.publish(msg)
+            time.sleep(0.01)
 
-    elif state == 2: # 闭合夹爪
-        gripper(0.0) 
-        if dt > 1.0: state = 3; state_t = now
+        # 停止
+        self.stop()
+        self.get_logger().info('✓ 直行完成')
 
-    elif state == 3: # 提起来
-        # 此时即便方块坐标在变，我们依然保持在它原本位置的上方
-        move_ee([cube_pos[0], cube_pos[1], 0.95])
-        gripper(0.0) # 提起来的过程中必须持续给闭合力
+    def turn(self, duration):
+        """旋转指定时间"""
+        self.get_logger().info('↻ 旋转...')
 
-    p.stepSimulation()
-    time.sleep(1./240.)
+        msg = Twist()
+        msg.linear.x = 0.0
+        msg.angular.z = float(self.TURN_SPEED)
+
+        start_time = self.get_clock().now()
+
+        while (self.get_clock().now() - start_time).nanoseconds < duration * 1e9:
+            self.cmd_vel_pub.publish(msg)
+            time.sleep(0.01)
+
+        self.stop()
+        self.get_logger().info('✓ 旋转完成')
+
+    def stop(self):
+        """停止运动"""
+        msg = Twist()
+        msg.linear.x = 0.0
+        msg.angular.z = 0.0
+        self.cmd_vel_pub.publish(msg)
+        time.sleep(0.1)
+
+    def move_square(self):
+        """执行走正方形"""
+        self.get_logger().info('🏁 开始走正方形！')
+
+        for i in range(4):
+            self.get_logger().info(f'━━━ 第 {i+1}/4 条边 ━━━')
+            self.move_straight(self.MOVE_TIME)
+
+            self.get_logger().info(f'━━━ 第 {i+1}/4 次转弯 ━━━')
+            self.turn(self.TURN_TIME)
+
+        self.get_logger().info('🎉 正方形走完！回到起点！')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = SquareMover()
+
+    # 给系统一点准备时间
+    time.sleep(1)
+
+    # 执行走正方形
+    node.move_square()
+
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
