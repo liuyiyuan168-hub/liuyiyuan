@@ -1,8 +1,5 @@
 # liuyiyuan
-
-diaasiaiiiodsjio
-
-faojoafon
+这周做了让小乌龟能稳稳地跑出正方形了。这周还尝试加载了机器狗模型，并把机械狗成功放倒。最后，把这些代码、截图都传到了 GitHub 上。
 ![alt text](1.png)
 ![alt text](2.png)
 ```#!/usr/bin/env python3

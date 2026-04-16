@@ -1,8 +1,5 @@
 # liuyiyuan
-
-diaasiaiiiodsjio
-
-faojoafon
+这周制作了一个机械臂模型，本来想让他把桌子上的方块抓起来，结果最后抓取失败了。最后，我把这些全部的代码、截图都上传到了 GitHub 上了。
 <video src="./8.mp4" controls width="100%"></video>
 ```import pybullet as p
 import pybullet_data
